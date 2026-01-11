@@ -8,10 +8,11 @@
 
 ## Available files
 
-The resulting `acrodefs.tex` can be obtained as 
+
+The resulting `acrodefs.tex` can be obtained as the LATEST version from the Gist:
 
 ```
-wget -O acrodefs.tex https://gist.githubusercontent.com/larsvilhuber/169753e43f3ef938c0db1410ffd34a44/raw/7c1032f0ff49af16a1fd08fab18a58e0b429c6b7/acrodefs.tex
+wget -O acrodefs.tex https://gist.githubusercontent.com/larsvilhuber/169753e43f3ef938c0db1410ffd34a44/raw/acrodefs.tex
 ```
 
 or 
