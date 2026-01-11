@@ -34,6 +34,39 @@ def get_file_date(file_path):
     except OSError:
         return datetime.min
 
+def count_braces(text, start_pos):
+    """Count balanced braces from start position and return the closing position."""
+    depth = 0
+    for i, char in enumerate(text[start_pos:], start=start_pos):
+        if char == '{':
+            depth += 1
+        elif char == '}':
+            depth -= 1
+            if depth == 0:
+                return i
+    return -1
+
+def extract_balanced_braces(text, start_pattern):
+    """Extract text with balanced braces starting from a pattern."""
+    matches = []
+    for match in re.finditer(start_pattern, text):
+        # Get the position after the label's closing brace
+        label = match.group(1).strip()
+        after_label = match.end()
+
+        # Skip whitespace
+        while after_label < len(text) and text[after_label] in ' \t\n':
+            after_label += 1
+
+        # Now find the definition part with balanced braces
+        if after_label < len(text) and text[after_label] == '{':
+            end_pos = count_braces(text, after_label)
+            if end_pos != -1:
+                full_match = text[match.start():end_pos+1]
+                matches.append((label, full_match))
+
+    return matches
+
 def read_acrodefs(file_path, file_date):
     """Read an acrodefs.tex file and extract definitions with dates."""
     definitions = []
@@ -41,26 +74,25 @@ def read_acrodefs(file_path, file_date):
         with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
             content = f.read()
             # Find all \acrodef, \newacronym or \newcommand definitions
-            # Pattern for \acrodef{label}{definition}
-            acrodef_pattern = r'\\acrodef\s*\{([^}]+)\}\s*\{([^}]*(?:\{[^}]*\}[^}]*)*)\}'
+            # Pattern for \acrodef{label} - we'll find the definition part separately
+            acrodef_start_pattern = r'\\acrodef\s*\{([^}]+)\}'
             # Pattern for \newacronym{label}{short}{long}
             newacronym_pattern = r'\\newacronym(?:\[.*?\])?\s*\{([^}]+)\}\s*\{([^}]+)\}\s*\{([^}]+)\}'
             # Pattern for \newcommand
-            newcommand_pattern = r'\\newcommand\s*\{([^}]+)\}(?:\[.*?\])?\s*\{([^}]*(?:\{[^}]*\}[^}]*)*)\}'
+            newcommand_start_pattern = r'\\newcommand\s*\{([^}]+)\}(?:\[.*?\])?'
 
-            for match in re.finditer(acrodef_pattern, content, re.MULTILINE):
-                full_match = match.group(0)
-                label = match.group(1).strip()
+            # Extract \acrodef with balanced braces
+            for label, full_match in extract_balanced_braces(content, acrodef_start_pattern):
                 definitions.append((label, full_match, 'acrodef', file_date, file_path))
 
+            # Extract \newacronym (these don't have complex nesting in the definition)
             for match in re.finditer(newacronym_pattern, content, re.MULTILINE):
                 full_match = match.group(0)
                 label = match.group(1).strip()
                 definitions.append((label, full_match, 'newacronym', file_date, file_path))
 
-            for match in re.finditer(newcommand_pattern, content, re.MULTILINE):
-                full_match = match.group(0)
-                label = match.group(1).strip()
+            # Extract \newcommand with balanced braces
+            for label, full_match in extract_balanced_braces(content, newcommand_start_pattern):
                 definitions.append((label, full_match, 'newcommand', file_date, file_path))
 
     except Exception as e:
